@@ -21,11 +21,13 @@ func NewRouter() *gin.Engine {
 	v1 := r.Group("/api/datav")
 	{
 		v1.GET("amtArea/:type", api.AmtArea)
+		v1.GET("countAmtArea/:type", api.CountAmtArea)
 		v1.GET("amtAll/:type", api.AmtAll)
 		v1.GET("amtTwo/:type", api.AmtTwo)
 		v1.GET("amtCompare/:type", api.AmtCompare)
 		v1.GET("amtTwoCompare/:type", api.AmtTwoCompare)
 		v1.GET("twoCompare/:type", api.TwoCompare)
+		v1.GET("attList/:type", api.AttList)
 
 		// 用户登录
 		v1.POST("user/register", api.UserRegister)
