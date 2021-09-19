@@ -17,6 +17,8 @@ func NewRouter() *gin.Engine {
 	r.Use(middleware.Cors())
 	r.Use(middleware.CurrentUser())
 
+	r.GET("licenseAdd/:platform", api.LicenseAdd)
+	//r.GET("fwAlert", api.FwAlert)
 	// 路由
 	v1 := r.Group("/api/datav")
 	{
@@ -27,7 +29,7 @@ func NewRouter() *gin.Engine {
 		v1.GET("amtCompare/:type", api.AmtCompare)
 		v1.GET("amtTwoCompare/:type", api.AmtTwoCompare)
 		v1.GET("twoCompare/:type", api.TwoCompare)
-		v1.GET("attList/:type", api.AttList)
+		v1.GET("attList/:type/:limit", api.AttList)
 
 		// 用户登录
 		v1.POST("user/register", api.UserRegister)

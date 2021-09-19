@@ -294,7 +294,8 @@ func AttList(c *gin.Context) {
 
 	//var logger = util.Log()
 	dateType := c.Param("type")
-	var redisKey = "cache8-" + dateType
+	limit, _ := strconv.Atoi(c.Param("limit"))
+	var redisKey = "cache8-" + dateType + "-" + c.Param("limit")
 	var db = model.DB
 	var attInfo []AttInfo
 	var rd = cache.RedisClient
@@ -310,9 +311,9 @@ func AttList(c *gin.Context) {
 		dateType := c.Param("type")
 		intDateType, _ := strconv.Atoi(dateType)
 		compareType := (intDateType-1)*24 + 12
-		sql := "SELECT*FROM(SELECT count(*)AS a,company_id,nickname as company_name FROM x_attendance_record LEFT JOIN x_api_company ON x_api_company.id=x_attendance_record.company_id WHERE attendance_day>=date_format(date_sub(CURRENT_TIME(),interval+? HOUR),'%Y-%m-%d')AND onwork_time IS NOT NULL GROUP BY x_attendance_record.company_id)a LEFT JOIN(SELECT count(*)AS b,x_attendance_record.company_id FROM x_attendance_record LEFT JOIN x_api_role ON x_api_role.id=x_attendance_record.role_id WHERE attendance_day>=date_format(date_sub(CURRENT_TIME(),interval+? HOUR),'%Y-%m-%d')AND onwork_time IS NOT NULL AND role_code='seller_leader' GROUP BY x_attendance_record.company_id)b ON a.company_id=b.company_id LEFT JOIN(SELECT count(*)AS c,x_attendance_record.company_id FROM x_attendance_record LEFT JOIN x_api_role ON x_api_role.id=x_attendance_record.role_id WHERE onwork_time>=date_format(date_sub(CURRENT_TIME(),interval+? HOUR),'%Y-%m-%d')AND onwork_time IS NOT NULL AND role_code='seller' GROUP BY x_attendance_record.company_id)c ON c.company_id=a.company_id order by a desc"
+		sql := "SELECT*FROM(SELECT count(*)AS a,company_id,nickname as company_name FROM x_attendance_record LEFT JOIN x_api_company ON x_api_company.id=x_attendance_record.company_id WHERE attendance_day>=date_format(date_sub(CURRENT_TIME(),interval+? HOUR),'%Y-%m-%d')AND onwork_time IS NOT NULL GROUP BY x_attendance_record.company_id)a LEFT JOIN(SELECT count(*)AS b,x_attendance_record.company_id FROM x_attendance_record LEFT JOIN x_api_role ON x_api_role.id=x_attendance_record.role_id WHERE attendance_day>=date_format(date_sub(CURRENT_TIME(),interval+? HOUR),'%Y-%m-%d')AND onwork_time IS NOT NULL AND role_code='seller_leader' GROUP BY x_attendance_record.company_id)b ON a.company_id=b.company_id LEFT JOIN(SELECT count(*)AS c,x_attendance_record.company_id FROM x_attendance_record LEFT JOIN x_api_role ON x_api_role.id=x_attendance_record.role_id WHERE onwork_time>=date_format(date_sub(CURRENT_TIME(),interval+? HOUR),'%Y-%m-%d')AND onwork_time IS NOT NULL AND role_code='seller' GROUP BY x_attendance_record.company_id)c ON c.company_id=a.company_id order by a desc limit ?"
 
-		db.Raw(sql, compareType, compareType, compareType).Scan(&attInfo)
+		db.Raw(sql, compareType, compareType, compareType, limit).Scan(&attInfo)
 
 		for _, value := range attInfo {
 			chart = append(chart, Chart{value.CompanyName, value.A, "考勤人数"})
