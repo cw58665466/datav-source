@@ -20,6 +20,12 @@ type Chart struct {
 	Y int    `json:"y"`
 	Z string `json:"z"`
 }
+
+type PriceSum struct {
+	SumPrice  float64 `json:"sumPrice"`
+	CompanyId int     `json:"company_id"`
+	Nickname  string  `json:"nickname"`
+}
 type AmtResult struct {
 	Value float64 `json:"value"`
 }
@@ -41,8 +47,26 @@ type AreaPrice struct {
 	CompanyCount int     `json:"companyCount"`
 }
 
+type CompanyRoomInfo struct {
+	Id        int64   `json:"id"`
+	AvgRoom   int64   `json:"avgRoom"`
+	N         string  `json:"n"`
+	AvgUpUser int64   `json:"avgUpUser"`
+	RoomCount int64   `json:"roomCount"`
+	Rjv       float64 `json:"rjv"`
+}
+type CompanyUpUserInfo struct {
+	Nickname    string
+	UpUserCount int64 `json:"upUserCount"`
+}
+
+type DuplicateCompanyUserInfo struct {
+	Area string `json:"area"`
+	Pv   int64  `json:"pv"`
+}
+
 //查询结果在redis中存储时间(秒)
-const redisCacheTime = 300
+const redisCacheTime = 600
 
 func AmtArea(c *gin.Context) {
 	var logger = util.Log()
@@ -317,8 +341,8 @@ func AttList(c *gin.Context) {
 
 		for _, value := range attInfo {
 			chart = append(chart, Chart{value.CompanyName, value.A, "考勤人数"})
-			chart = append(chart, Chart{value.CompanyName, value.B, "妈咪考勤人数"})
-			chart = append(chart, Chart{value.CompanyName, value.C, "小姐考勤人数"})
+			chart = append(chart, Chart{value.CompanyName, value.B, "业务经理"})
+			chart = append(chart, Chart{value.CompanyName, value.C, "酒水促销员"})
 		}
 		data, _ := json.Marshal(chart)
 		rd.Set(redisKey, data, redisCacheTime*time.Second)
@@ -326,6 +350,111 @@ func AttList(c *gin.Context) {
 	}
 
 	c.JSON(200, chart)
+}
+
+func SumPrice(c *gin.Context) {
+	//var logger = util.Log()
+	dateType := c.Param("type")
+	limit, _ := strconv.Atoi(c.Param("limit"))
+	var redisKey = "cache9-" + dateType + "-" + c.Param("limit")
+	var db = model.DB
+	var rd = cache.RedisClient
+	var result []PriceSum
+	var ext = rd.Exists(redisKey)
+	if ext.Val() == 1 {
+		var jsonStr = rd.Get(redisKey)
+		//logger.Info(jsonStr.Val())
+		_ = json.Unmarshal([]byte(jsonStr.Val()), &result)
+
+	} else {
+
+		db.Raw("SELECT a.*,b.nickname FROM(SELECT SUM(price)/100 AS sum_price,company_id FROM x_user_ticket WHERE used_time>=DATE_SUB(NOW(),INTERVAL ? DAY)AND status=1 AND source_type=1 AND price>0 GROUP BY company_id)a LEFT JOIN x_api_company b ON a.company_id=b.id ORDER BY sum_price DESC LIMIT ?", dateType, limit).Scan(&result)
+
+		data, _ := json.Marshal(result)
+		rd.Set(redisKey, data, redisCacheTime*time.Second)
+
+	}
+
+	c.JSON(200, result)
+}
+
+func CompanyRoom(c *gin.Context) {
+	//var logger = util.Log()
+	dateType := c.Param("type")
+	startRoomCount, _ := strconv.Atoi(c.Param("startRoomCount"))
+	endRoomCount, _ := strconv.Atoi(c.Param("endRoomCount"))
+	limit, _ := strconv.Atoi(c.Param("limit"))
+	var redisKey = "cache10-" + dateType + "-" + c.Param("limit") + "-" + c.Param("startRoomCount") + "-" + c.Param("endRoomCount")
+	var db = model.DB
+	var rd = cache.RedisClient
+	var result []CompanyRoomInfo
+	var ext = rd.Exists(redisKey)
+	if ext.Val() == 1 {
+		var jsonStr = rd.Get(redisKey)
+		//logger.Info(jsonStr.Val())
+		_ = json.Unmarshal([]byte(jsonStr.Val()), &result)
+
+	} else {
+
+		db.Raw("SELECT s.id,s.roomCount as room_count,s.n,s.avg_room,s.avg_up_user,s.avg_up_user/s.avg_room AS rjv FROM(SELECT company.id,e.roomCount,company.nickname AS n,CASE WHEN d.rooms IS NULL THEN 0 ELSE d.rooms END AS avg_room,CASE WHEN c.upUser IS NULL THEN 0 ELSE c.upUser END AS avg_up_user FROM x_api_company company LEFT JOIN(SELECT count(1)AS upUser,company_id FROM x_company_room_up_stage WHERE STATUS=0 AND add_time>DATE_SUB(NOW(),INTERVAL ? DAY)GROUP BY company_id)c ON c.company_id=company.id LEFT JOIN(SELECT count(1)AS rooms,company_id FROM x_company_room_consume_history WHERE add_time>DATE_SUB(NOW(),INTERVAL ? DAY)GROUP BY company_id)d ON d.company_id=company.id LEFT JOIN(SELECT count(1)AS roomCount,company_id FROM x_company_room WHERE status=0 AND is_delete=0 GROUP BY company_id)e ON e.company_id=company.id WHERE company.STATUS=0)s WHERE  s.roomCount > ? and s.roomCount< ? ORDER BY avg_room DESC LIMIT ?", dateType, dateType, startRoomCount, endRoomCount, limit).Scan(&result)
+
+		data, _ := json.Marshal(result)
+		rd.Set(redisKey, data, redisCacheTime*time.Second)
+
+	}
+
+	c.JSON(200, result)
+}
+
+func CompanyUpUser(c *gin.Context) {
+	//var logger = util.Log()
+	dateType := c.Param("type")
+	limit, _ := strconv.Atoi(c.Param("limit"))
+	var redisKey = "cache11-" + dateType + "-" + c.Param("limit")
+	var db = model.DB
+	var rd = cache.RedisClient
+	var result []CompanyUpUserInfo
+	var ext = rd.Exists(redisKey)
+	if ext.Val() == 1 {
+		var jsonStr = rd.Get(redisKey)
+		//logger.Info(jsonStr.Val())
+		_ = json.Unmarshal([]byte(jsonStr.Val()), &result)
+
+	} else {
+
+		db.Raw("SELECT company.nickname,c.upUser AS up_user_count FROM x_api_company company LEFT JOIN(SELECT count(1)AS companyUser,company_id FROM x_api_user_company WHERE disabled NOT IN(2,4)AND STATUS IN(0,1)GROUP BY company_id)a ON a.company_id=company.id LEFT JOIN(SELECT count(1)AS attUser,company_id FROM x_attendance_record WHERE onwork_time IS NOT NULL AND onwork_time>DATE_SUB(NOW(),INTERVAL ? DAY)GROUP BY company_id)b ON b.company_id=company.id LEFT JOIN(SELECT count(1)AS upUser,company_id FROM x_company_room_up_stage WHERE STATUS=0 AND add_time>DATE_SUB(NOW(),INTERVAL ? DAY)GROUP BY company_id)c ON c.company_id=company.id WHERE company.STATUS=0 ORDER BY upuser DESC LIMIT ?", dateType, dateType, limit).Scan(&result)
+
+		data, _ := json.Marshal(result)
+		rd.Set(redisKey, data, redisCacheTime*time.Second)
+
+	}
+
+	c.JSON(200, result)
+}
+
+func DuplicateCompanyUser(c *gin.Context) {
+	//var logger = util.Log()
+	dateType := c.Param("type")
+	var redisKey = "cache12-" + dateType
+	var db = model.DB
+	var rd = cache.RedisClient
+	var result []DuplicateCompanyUserInfo
+	var ext = rd.Exists(redisKey)
+	if ext.Val() == 1 {
+		var jsonStr = rd.Get(redisKey)
+		//logger.Info(jsonStr.Val())
+		_ = json.Unmarshal([]byte(jsonStr.Val()), &result)
+
+	} else {
+
+		db.Raw("SELECT v.company_name AS\"area\",a.y AS\"pv\",NOW()AS\"attribute\" FROM x_api_company v,(SELECT COMPANY_ID,count(*)AS Y FROM x_api_user_company WHERE creat_date>date_sub(curdate(),INTERVAL ? DAY)GROUP BY USER_ID)a WHERE v.id=a.COMPANY_ID AND a.company_id>12 AND a.Y>1 ORDER BY a.y DESC", dateType).Scan(&result)
+
+		data, _ := json.Marshal(result)
+		rd.Set(redisKey, data, redisCacheTime*time.Second)
+
+	}
+
+	c.JSON(200, result)
 }
 
 func SqlGet(sql string, dateType string, sum chan float64) {

@@ -29,7 +29,11 @@ func NewRouter() *gin.Engine {
 		v1.GET("amtCompare/:type", api.AmtCompare)
 		v1.GET("amtTwoCompare/:type", api.AmtTwoCompare)
 		v1.GET("twoCompare/:type", api.TwoCompare)
+		v1.GET("duplicateCompanyUser/:type", api.DuplicateCompanyUser)
 		v1.GET("attList/:type/:limit", api.AttList)
+		v1.GET("companyUpUser/:type/:limit", api.CompanyUpUser)
+		v1.GET("sumPrice/:type/:limit", api.SumPrice)
+		v1.GET("companyRoom/:type/:startRoomCount/:endRoomCount/:limit", api.CompanyRoom)
 
 		// 用户登录
 		v1.POST("user/register", api.UserRegister)
