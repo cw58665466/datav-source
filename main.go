@@ -19,6 +19,9 @@ func main() {
 	_ = c.AddFunc("0 0 10 * * *", func() {
 		api.FwAlert()
 	})
+	//_ = c.AddFunc("5 * * * * *", func() {
+	//	api.FwAlert()
+	//})
 	c.Start()
 
 	// 装载路由

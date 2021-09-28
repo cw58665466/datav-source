@@ -21,6 +21,8 @@ func FwAlert() {
 	for _, value := range listArr {
 		redisKey := "platformTimeKey:" + value
 		var ext = rd.Exists(redisKey)
+
+		fmt.Printf("%s -> %s \n\r", redisKey, ext)
 		if ext.Val() == 1 {
 			CheckPlatformLicense(value, rd.Get(redisKey).Val())
 		} else {
@@ -39,9 +41,10 @@ func CheckPlatformLicense(platformName string, resetTime string) {
 	if noticeDate.Before(time.Now()) {
 		days := (int)(expiredDate.Unix()-time.Now().Unix()) / 3600 / 24
 		url := fmt.Sprintf("https://fwalert.com/9db88a6c-9d97-4ea6-8b20-3f42b35ee3ab?platform=%s&days=%d", platformName, days)
-		fmt.Println(Get(url))
+		fmt.Printf(Get(url))
+		fmt.Printf("unit %d \n\r", days)
 	} else {
-		fmt.Printf("%s -> %s", platformName, expiredDate)
+		fmt.Printf("%s -> %s \n\n", platformName, expiredDate)
 	}
 
 }
