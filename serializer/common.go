@@ -22,6 +22,8 @@ type TrackedErrorResponse struct {
 // 四开头的五位数错误编码为客户端错误，有时候是客户端代码写错了，有时候是用户操作错误
 const (
 	// CodeCheckLogin 未登录
+	success = 200
+	// CodeCheckLogin 未登录
 	CodeCheckLogin = 401
 	// CodeNoRightErr 未授权访问
 	CodeNoRightErr = 403
@@ -68,4 +70,18 @@ func ParamErr(msg string, err error) Response {
 		msg = "参数错误"
 	}
 	return Err(CodeParamErr, msg, err)
+}
+
+// ParamErr 各种参数错误
+func LoginSuccess(token string, err error) Response {
+	res := Response{
+		Code: success,
+		Msg:  "登录成功",
+		Data: gin.H{"token": token},
+	}
+	// 生产环境隐藏底层报错
+	if err != nil && gin.Mode() != gin.ReleaseMode {
+		res.Error = err.Error()
+	}
+	return res
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/http"
 	"singo/serializer"
 	"singo/service"
 
@@ -21,9 +22,9 @@ func UserRegister(c *gin.Context) {
 
 // UserLogin 用户登录接口
 func UserLogin(c *gin.Context) {
-	var service service.UserLoginService
-	if err := c.ShouldBind(&service); err == nil {
-		res := service.Login(c)
+	var loginService service.JwtLoginService
+	if err := c.ShouldBindJSON(&loginService); err == nil {
+		res := loginService.JwtLogin(c)
 		c.JSON(200, res)
 	} else {
 		c.JSON(200, ErrorResponse(err))
@@ -45,5 +46,14 @@ func UserLogout(c *gin.Context) {
 	c.JSON(200, serializer.Response{
 		Code: 0,
 		Msg:  "登出成功",
+	})
+}
+
+func HomeHandler(c *gin.Context) {
+	user := service.CurrentUser(c)
+	c.JSON(http.StatusOK, gin.H{
+		"code": 2000,
+		"msg":  "success",
+		"data": gin.H{"id": user},
 	})
 }

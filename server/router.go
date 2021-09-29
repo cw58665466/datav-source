@@ -1,7 +1,6 @@
 package server
 
 import (
-	"os"
 	"singo/api"
 	"singo/middleware"
 
@@ -12,10 +11,14 @@ import (
 func NewRouter() *gin.Engine {
 	r := gin.Default()
 
+	// 用户登录
+	r.POST("/api/user/login", api.UserLogin)
+	//r.GET("/api/user/home", middleware.JWTAuthMiddleware(), api.HomeHandler)
+
 	// 中间件, 顺序不能改
-	r.Use(middleware.Session(os.Getenv("SESSION_SECRET")))
+	//r.Use(middleware.Session(os.Getenv("SESSION_SECRET")))
 	r.Use(middleware.Cors())
-	r.Use(middleware.CurrentUser())
+	//r.Use(middleware.CurrentUser())
 
 	r.GET("licenseAdd/:platform", api.LicenseAdd)
 	//r.GET("fwAlert", api.FwAlert)
@@ -38,16 +41,12 @@ func NewRouter() *gin.Engine {
 		// 用户登录
 		v1.POST("user/register", api.UserRegister)
 
-		// 用户登录
-		v1.POST("user/login", api.UserLogin)
-
 		// 需要登录保护的
-		auth := v1.Group("")
-		auth.Use(middleware.AuthRequired())
+		auth := r.Group("/api")
+		auth.Use(middleware.JWTAuthMiddleware())
 		{
 			// User Routing
-			auth.GET("user/me", api.UserMe)
-			auth.DELETE("user/logout", api.UserLogout)
+			auth.GET("user/me", api.HomeHandler)
 		}
 	}
 	return r
