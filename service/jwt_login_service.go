@@ -79,6 +79,10 @@ func ParseToken(tokenString string) (*MyClaims, error) {
 	return nil, errors.New("invalid token")
 }
 
+func Logout(tokenString string) {
+
+}
+
 func CurrentUser(c *gin.Context) model.XPoliceUser {
 
 	userId := c.MustGet("userId")

@@ -1,8 +1,12 @@
 package server
 
 import (
+	"io"
+	"log"
+	"os"
 	"singo/api"
 	"singo/middleware"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,15 +15,47 @@ import (
 func NewRouter() *gin.Engine {
 	r := gin.Default()
 
+	//r.Use(gin.Logger())
 	// 用户登录
 	r.POST("/api/user/login", api.UserLogin)
 	//r.GET("/api/user/home", middleware.JWTAuthMiddleware(), api.HomeHandler)
 
+	f, _ := os.Create("gin.log")
+	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
 	// 中间件, 顺序不能改
 	//r.Use(middleware.Session(os.Getenv("SESSION_SECRET")))
 	r.Use(middleware.Cors())
 	//r.Use(middleware.CurrentUser())
+	r.GET("/long_async", func(c *gin.Context) {
+		// 创建在 goroutine 中使用的副本
+		cCp := c.Copy()
+		go func() {
+			// 用 time.Sleep() 模拟一个长任务。
+			time.Sleep(15 * time.Second)
 
+			// 请注意您使用的是复制的上下文 "cCp"，这一点很重要
+			log.Println("Done! in path " + cCp.Request.URL.Path)
+		}()
+	})
+	r.GET("/long_async_cp", func(c *gin.Context) {
+		// 创建在 goroutine 中使用的副本
+		cCp := c.Copy()
+		go func() {
+			// 用 time.Sleep() 模拟一个长任务。
+			time.Sleep(15 * time.Second)
+
+			// 请注意您使用的是复制的上下文 "cCp"，这一点很重要
+			log.Println("Done! in path " + cCp.Request.URL.Path)
+		}()
+	})
+
+	r.GET("/long_sync", func(c *gin.Context) {
+		// 用 time.Sleep() 模拟一个长任务。
+		time.Sleep(5 * time.Second)
+
+		// 因为没有使用 goroutine，不需要拷贝上下文
+		log.Println("Done! in path " + c.Request.URL.Path)
+	})
 	r.GET("licenseAdd/:platform", api.LicenseAdd)
 	//r.GET("fwAlert", api.FwAlert)
 	// 路由
