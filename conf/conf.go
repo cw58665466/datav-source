@@ -12,7 +12,7 @@ import (
 // Init 初始化配置项
 func Init() {
 	// 从本地读取环境变量
-	godotenv.Load()
+	godotenv.Load("/etc/secret/.env")
 
 	// 设置日志级别
 	util.BuildLogger(os.Getenv("LOG_LEVEL"))
